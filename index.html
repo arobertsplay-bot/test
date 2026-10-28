@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pokemon Pocket Controller</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111827;
+      color: #f9fafb;
+      padding: 24px;
+      text-align: center;
+    }
+    main { max-width: 720px; margin: auto; }
+    button {
+      padding: 12px 16px;
+      margin: 5px;
+      border: 0;
+      border-radius: 8px;
+      background: #38bdf8;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    #status { color: #93c5fd; }
+    #screen {
+      display: block;
+      max-width: 360px;
+      width: 100%;
+      margin: 20px auto;
+    }
+    #log {
+      text-align: left;
+      background: #1e293b;
+      padding: 16px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h2>Pokemon Pocket Controller</h2>
+    <p id="status">Loading...</p>
+
+    <button id="connect">Connect Pixel 9</button>
+    <button id="capture" disabled>Capture Screen</button>
+    <button id="monitor" disabled>Start Monitoring</button>
+    <button id="stop" disabled>Stop</button>
+
+    <img id="screen" alt="Pixel screenshot">
+    <h3>Diagnostics</h3>
+    <pre id="log">Waiting...</pre>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
