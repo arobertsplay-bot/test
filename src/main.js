@@ -14,7 +14,11 @@ import AdbWebCredentialStore
 let adb = null;
 let timer = null;
 let capturing = false;
+let tapping = false;
 let imageUrl = null;
+
+let screenWidth = 1080;
+let screenHeight = 2424;
 
 const $ = id => document.getElementById(id);
 const logBox = $("log");
@@ -32,6 +36,8 @@ function report(message) {
   $("status").textContent = message;
   console.log(message);
 }
+
+// CONNECT TO PIXEL
 
 $("connect").onclick = async () => {
   $("connect").disabled = true;
@@ -91,7 +97,17 @@ $("connect").onclick = async () => {
       );
     }
 
-    report("Connected: " + result.stdout.trim());
+    const sizeText = result.stdout.trim();
+
+    const sizeMatch =
+      sizeText.match(/(\d+)\s*x\s*(\d+)/);
+
+    if (sizeMatch) {
+      screenWidth = Number(sizeMatch[1]);
+      screenHeight = Number(sizeMatch[2]);
+    }
+
+    report("Connected: " + sizeText);
 
     $("capture").disabled = false;
     $("monitor").disabled = false;
@@ -105,6 +121,8 @@ $("connect").onclick = async () => {
     }
   }
 };
+
+// CAPTURE PHONE SCREEN
 
 async function captureScreen() {
   if (!adb || capturing) return;
@@ -139,6 +157,8 @@ async function captureScreen() {
     image.src = newUrl;
     imageUrl = newUrl;
 
+    image.style.cursor = "crosshair";
+
     report("Screenshot captured");
 
   } catch (error) {
@@ -150,6 +170,115 @@ async function captureScreen() {
 }
 
 $("capture").onclick = captureScreen;
+
+// TAP PHONE BY CLICKING SCREENSHOT
+
+$("screen").onclick = async event => {
+  if (!adb || tapping) return;
+
+  const image = $("screen");
+
+  if (!image.naturalWidth || !image.naturalHeight) {
+    report("No screenshot available");
+    return;
+  }
+
+  const rect = image.getBoundingClientRect();
+
+  // Account for any CSS object-fit scaling.
+  const imageRatio =
+    image.naturalWidth / image.naturalHeight;
+
+  const boxRatio =
+    rect.width / rect.height;
+
+  let displayedWidth = rect.width;
+  let displayedHeight = rect.height;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (
+    getComputedStyle(image).objectFit === "contain"
+  ) {
+    if (boxRatio > imageRatio) {
+      displayedWidth = rect.height * imageRatio;
+      offsetX = (rect.width - displayedWidth) / 2;
+    } else {
+      displayedHeight = rect.width / imageRatio;
+      offsetY = (rect.height - displayedHeight) / 2;
+    }
+  }
+
+  const relativeX =
+    (event.clientX - rect.left - offsetX)
+    / displayedWidth;
+
+  const relativeY =
+    (event.clientY - rect.top - offsetY)
+    / displayedHeight;
+
+  if (
+    relativeX < 0 || relativeX > 1 ||
+    relativeY < 0 || relativeY > 1
+  ) {
+    report("Click outside phone screen");
+    return;
+  }
+
+  const x = Math.max(
+    0,
+    Math.min(
+      screenWidth - 1,
+      Math.round(relativeX * screenWidth)
+    )
+  );
+
+  const y = Math.max(
+    0,
+    Math.min(
+      screenHeight - 1,
+      Math.round(relativeY * screenHeight)
+    )
+  );
+
+  tapping = true;
+
+  try {
+    report(`Tapping phone at ${x}, ${y}`);
+
+    const result =
+      await adb.subprocess.shellProtocol
+        .spawnWaitText([
+          "input",
+          "tap",
+          String(x),
+          String(y)
+        ]);
+
+    if (result.exitCode !== 0) {
+      throw new Error(
+        result.stderr || "Tap command failed"
+      );
+    }
+
+    report(`Tap successful: ${x}, ${y}`);
+
+    // Allow the game to respond before capturing.
+    await new Promise(resolve =>
+      setTimeout(resolve, 500)
+    );
+
+    await captureScreen();
+
+  } catch (error) {
+    report("Tap error: " + error.message);
+    console.error(error);
+  } finally {
+    tapping = false;
+  }
+};
+
+// MONITOR SCREEN
 
 $("monitor").onclick = () => {
   if (!adb || timer) return;
