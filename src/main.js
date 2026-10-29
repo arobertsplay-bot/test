@@ -171,35 +171,37 @@ async function captureScreen() {
 
 $("capture").onclick = captureScreen;
 
-// TAP PHONE BY CLICKING SCREENSHOT
 
-$("screen").onclick = async event => {
-  if (!adb || tapping) return;
+ // TOUCHSCREEN CONTROL: TAP, SWIPE AND DRAG
 
-  const image = $("screen");
+const screenImage = $("screen");
+
+screenImage.style.cursor = "crosshair";
+screenImage.style.touchAction = "none";
+
+let pointerStart = null;
+let gestureBusy = false;
+
+function getPhoneCoordinates(event) {
+  const image = screenImage;
 
   if (!image.naturalWidth || !image.naturalHeight) {
-    report("No screenshot available");
-    return;
+    throw new Error("Capture a screenshot first");
   }
 
   const rect = image.getBoundingClientRect();
 
-  // Account for any CSS object-fit scaling.
   const imageRatio =
     image.naturalWidth / image.naturalHeight;
 
-  const boxRatio =
-    rect.width / rect.height;
+  const boxRatio = rect.width / rect.height;
 
   let displayedWidth = rect.width;
   let displayedHeight = rect.height;
   let offsetX = 0;
   let offsetY = 0;
 
-  if (
-    getComputedStyle(image).objectFit === "contain"
-  ) {
+  if (getComputedStyle(image).objectFit === "contain") {
     if (boxRatio > imageRatio) {
       displayedWidth = rect.height * imageRatio;
       offsetX = (rect.width - displayedWidth) / 2;
@@ -210,73 +212,138 @@ $("screen").onclick = async event => {
   }
 
   const relativeX =
-    (event.clientX - rect.left - offsetX)
-    / displayedWidth;
+    (event.clientX - rect.left - offsetX) /
+    displayedWidth;
 
   const relativeY =
-    (event.clientY - rect.top - offsetY)
-    / displayedHeight;
+    (event.clientY - rect.top - offsetY) /
+    displayedHeight;
 
-  if (
-    relativeX < 0 || relativeX > 1 ||
-    relativeY < 0 || relativeY > 1
-  ) {
-    report("Click outside phone screen");
+  return {
+    x: Math.max(
+      0,
+      Math.min(
+        screenWidth - 1,
+        Math.round(relativeX * screenWidth)
+      )
+    ),
+    y: Math.max(
+      0,
+      Math.min(
+        screenHeight - 1,
+        Math.round(relativeY * screenHeight)
+      )
+    )
+  };
+}
+
+screenImage.addEventListener("pointerdown", event => {
+  if (!adb || gestureBusy || event.button !== 0) return;
+
+  try {
+    pointerStart = {
+      ...getPhoneCoordinates(event),
+      time: Date.now(),
+      pointerId: event.pointerId
+    };
+
+    screenImage.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  } catch (error) {
+    report("Gesture error: " + error.message);
+  }
+});
+
+screenImage.addEventListener("pointerup", async event => {
+  if (!adb || !pointerStart || gestureBusy) return;
+
+  if (event.pointerId !== pointerStart.pointerId) return;
+
+  const start = pointerStart;
+  pointerStart = null;
+
+  let end;
+
+  try {
+    end = getPhoneCoordinates(event);
+  } catch (error) {
+    report("Gesture error: " + error.message);
     return;
   }
 
-  const x = Math.max(
-    0,
-    Math.min(
-      screenWidth - 1,
-      Math.round(relativeX * screenWidth)
-    )
+  const distance = Math.hypot(
+    end.x - start.x,
+    end.y - start.y
   );
 
-  const y = Math.max(
-    0,
-    Math.min(
-      screenHeight - 1,
-      Math.round(relativeY * screenHeight)
-    )
-  );
+  const duration = Date.now() - start.time;
 
-  tapping = true;
+  gestureBusy = true;
 
   try {
-    report(`Tapping phone at ${x}, ${y}`);
+    let args;
 
-    const result =
-      await adb.subprocess.shellProtocol
-        .spawnWaitText([
-          "input",
-          "tap",
-          String(x),
-          String(y)
-        ]);
+    if (distance < 25 && duration < 500) {
+      args = [
+        "input",
+        "tap",
+        String(start.x),
+        String(start.y)
+      ];
 
-    if (result.exitCode !== 0) {
-      throw new Error(
-        result.stderr || "Tap command failed"
+      report(`Tapping ${start.x}, ${start.y}`);
+    } else {
+      const swipeDuration = Math.max(
+        150,
+        Math.min(1500, duration)
+      );
+
+      args = [
+        "input",
+        "swipe",
+        String(start.x),
+        String(start.y),
+        String(end.x),
+        String(end.y),
+        String(swipeDuration)
+      ];
+
+      report(
+        `Swiping ${start.x},${start.y} ` +
+        `to ${end.x},${end.y}`
       );
     }
 
-    report(`Tap successful: ${x}, ${y}`);
+    const result =
+      await adb.subprocess.shellProtocol
+        .spawnWaitText(args);
 
-    // Allow the game to respond before capturing.
+    if (result.exitCode !== 0) {
+      throw new Error(
+        result.stderr || "Gesture command failed"
+      );
+    }
+
+    report("Gesture successful");
+
     await new Promise(resolve =>
-      setTimeout(resolve, 500)
+      setTimeout(resolve, 600)
     );
 
     await captureScreen();
 
   } catch (error) {
-    report("Tap error: " + error.message);
+    report("Gesture error: " + error.message);
     console.error(error);
   } finally {
-    tapping = false;
+    gestureBusy = false;
   }
-};
+});
+
+screenImage.addEventListener("pointercancel", () => {
+  pointerStart = null;
+});
+
 
 // MONITOR SCREEN
 
