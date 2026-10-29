@@ -1,4 +1,4 @@
-
+import { createBattleDetector } from "./battle-detector.js";
 import {
   Adb,
   AdbDaemonTransport
@@ -369,5 +369,21 @@ $("stop").onclick = () => {
 
   report("Monitoring stopped");
 };
+let detectBattle = null;
+createBattleDetector($("screen"), report)
+  .then(fn => {
+    detectBattle = fn;
+    report("Battle detector loaded");
+  })
+  .catch(error => report("Detector setup error: " + error.message));
+
+const detectorButton = document.createElement("button");
+detectorButton.textContent = "Analyse Screen";
+detectorButton.onclick = () => {
+  if (!detectBattle) return report("Detector not ready");
+  detectBattle();
+};
+$("capture").insertAdjacentElement("afterend", detectorButton);
+
 
 report("Ready to connect");
