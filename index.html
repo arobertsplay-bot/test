@@ -3,62 +3,165 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
   <title>Pokemon Pocket Controller</title>
+
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 40px 20px;
       background: #111827;
-      color: #f9fafb;
-      padding: 24px;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
       text-align: center;
     }
-    main { max-width: 720px; margin: auto; }
-    button {
-      padding: 12px 16px;
-      margin: 5px;
-      border: 0;
-      border-radius: 8px;
-      background: #38bdf8;
-      cursor: pointer;
-      font-weight: bold;
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 14px;
     }
-    button:disabled { opacity: .4; cursor: not-allowed; }
-    #status { color: #93c5fd; }
+
+    #status {
+      color: #60a5fa;
+      margin-bottom: 22px;
+      font-size: 15px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 7px;
+      background: #38bdf8;
+      color: #071827;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+      background: #7dd3fc;
+    }
+
+    button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    #test-energy {
+      background: #fbbf24;
+      color: #111827;
+    }
+
+    #test-energy:hover:not(:disabled) {
+      background: #fcd34d;
+    }
+
     #screen {
       display: block;
-      max-width: 360px;
-      width: 100%;
+      max-width: 100%;
+      width: 360px;
+      height: auto;
       margin: 20px auto;
+      border: 1px solid #374151;
+      border-radius: 8px;
     }
-    #log {
+
+    .diagnostics {
+      max-width: 900px;
+      margin: 30px auto;
       text-align: left;
-      background: #1e293b;
+    }
+
+    .diagnostics h2 {
+      font-size: 20px;
+    }
+
+    #log {
+      background: #030712;
+      color: #86efac;
       padding: 16px;
       border-radius: 8px;
+      min-height: 120px;
+      max-height: 400px;
+      overflow: auto;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
-      font-size: 12px;
-      max-height: 280px;
-      overflow-y: auto;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
     }
   </style>
 </head>
+
 <body>
-  <main>
-    <h2>Pokemon Pocket Controller</h2>
-    <p id="status">Loading...</p>
 
-    <button id="connect">Connect Pixel 9</button>
-    <button id="capture" disabled>Capture Screen</button>
-    <button id="monitor" disabled>Start Monitoring</button>
-    <button id="stop" disabled>Stop</button>
+  <h1>Pokemon Pocket Controller</h1>
 
-    <img id="screen" alt="Pixel screenshot">
-    <h3>Diagnostics</h3>
+  <p id="status">Loading...</p>
+
+  <div class="controls">
+
+    <button id="connect">
+      Connect Pixel 9
+    </button>
+
+    <button id="capture" disabled>
+      Capture Screen
+    </button>
+
+    <button id="analyse" disabled>
+      Analyse Screen
+    </button>
+
+    <button id="monitor" disabled>
+      Start Monitoring
+    </button>
+
+    <button id="stop" disabled>
+      Stop
+    </button>
+
+    <button id="test-energy" disabled>
+      Test Energy Attachment
+    </button>
+
+  </div>
+
+  <h2>Pixel Screenshot</h2>
+
+  <img
+    id="screen"
+    alt="Pixel 9 screenshot"
+  >
+
+  <section class="diagnostics">
+
+    <h2>Diagnostics</h2>
+
     <pre id="log">Waiting...</pre>
-  </main>
 
-  <script type="module" src="./src/main.js"></script>
+  </section>
+
+  <script
+    type="module"
+    src="./src/main.js"
+  ></script>
+
 </body>
 </html>
